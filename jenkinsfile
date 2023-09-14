@@ -1,0 +1,46 @@
+pipeline {
+    agent {
+        label 'my-k8s-agent' // Use the label assigned to the Kubernetes agent template
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm // Checkout source code from Git
+            }
+        }
+        stage('Build and Test') {
+            steps {
+                // Build your application (adjust the build commands as needed)
+                sh 'mvn clean install'
+                // Run tests (adjust the test commands as needed)
+                sh 'mvn test'
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                // Deploy your application to Kubernetes (adjust the deployment commands as needed)
+                sh 'kubectl apply -f deployment.yaml'
+            }
+        }
+        stage('Update Kubernetes Deployment') {
+            when {
+                changeset "**"
+            }
+            steps {
+                script {
+                    // Define the Kubernetes deployment update command.
+                    def kubectlUpdateCommand = 'kubectl apply -f deployment.yaml' // Adjust as needed
+
+                    // Run the update command only if changes were detected in the repository.
+                    def changes = currentBuild.changeSets
+                    if (changes != null && !changes.isEmpty()) {
+                        echo "Changes detected in the repository. Updating Kubernetes deployment..."
+                        sh kubectlUpdateCommand
+                    } else {
+                        echo "No changes detected in the repository. Skipping deployment update."
+                    }
+                }
+            }
+        }
+    }
+}
