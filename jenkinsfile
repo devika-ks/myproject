@@ -1,44 +1,28 @@
 pipeline {
-    agent {
-        label 'my-k8s-agent' // Use the label assigned to the Kubernetes agent template
-    }
+    agent any
+
     stages {
-        stage('Checkout') {
+        stage('Checkout Source') {
             steps {
-                checkout scm // Checkout source code from Git
+                git branch: 'main', url: 'https://github.com/devika-ks/myproject.git', credentialsId: 'github'
             }
         }
-        stage('Build and Test') {
-            steps {
-                // Build your application (adjust the build commands as needed)
-                sh 'mvn clean install'
-                // Run tests (adjust the test commands as needed)
-                sh 'mvn test'
-            }
-        }
+        
         stage('Deploy to Kubernetes') {
             steps {
                 // Deploy your application to Kubernetes (adjust the deployment commands as needed)
-                sh 'kubectl apply -f deployment.yaml'
+                script{
+			            sh 'ls -l /tmp'
+            			sh '/tmp/kubectl config get-contexts'
+            			sh '/tmp/kubectl apply -f ./release/kubernetes-manifests.yaml -n jenkins'
             }
         }
-        stage('Update Kubernetes Deployment') {
-            when {
-                changeset "**"
-            }
+        stage('Get Pods Status') {
+            
             steps {
                 script {
-                    // Define the Kubernetes deployment update command.
-                    def kubectlUpdateCommand = 'kubectl apply -f deployment.yaml' // Adjust as needed
-
-                    // Run the update command only if changes were detected in the repository.
-                    def changes = currentBuild.changeSets
-                    if (changes != null && !changes.isEmpty()) {
-                        echo "Changes detected in the repository. Updating Kubernetes deployment..."
-                        sh kubectlUpdateCommand
-                    } else {
-                        echo "No changes detected in the repository. Skipping deployment update."
-                    }
+                    
+                    sh '/tmp/kubectl get pods -n jenkins
                 }
             }
         }
